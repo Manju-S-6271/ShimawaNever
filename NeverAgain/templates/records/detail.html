@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ record.vault_ticket_no }}{% endblock %}
+{% block content %}
+
+<div class="action-bar" style="margin-bottom:1rem;">
+  <a href="/records" class="btn btn-outline btn-sm">← 一覧へ</a>
+  <div class="spacer"></div>
+  <a href="/records/{{ record.id }}/edit" class="btn btn-secondary">編集</a>
+</div>
+
+<div class="detail-header">
+  <div class="ticket">{{ record.vault_ticket_no }}</div>
+  <div class="record-name">{{ record.name_ja }}</div>
+  {% if record.name_en %}
+  <div style="margin-top:0.3rem;opacity:0.7;font-size:0.9rem;">{{ record.name_en }}</div>
+  {% endif %}
+  <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+    <span class="badge badge-{{ record.vault_type }}" style="font-size:0.8rem;padding:0.2rem 0.7rem;">{{ record.vault_type }}
+      {% if record.vault_type == 'LS' %} 機密資料
+      {% elif record.vault_type == 'LI' %} 重要資料
+      {% elif record.vault_type == 'LH' %} 記録資料
+      {% elif record.vault_type == 'LW' %} 持出資料
+      {% elif record.vault_type == 'LB' %} 書籍
+      {% endif %}
+    </span>
+    <span class="badge badge-{{ 'doc' if record.category == 'document' else 'book' }}" style="font-size:0.8rem;padding:0.2rem 0.7rem;">
+      {{ '書類' if record.category == 'document' else '書籍' }}
+    </span>
+  </div>
+</div>
+
+<div class="detail-body">
+  <div class="detail-grid">
+
+    <div class="detail-item">
+      <div class="di-label">識別符号</div>
+      <div class="di-value mono">
+        {% if record.iss_code %}
+          {{ record.iss_code }}-{{ record.issuer_sub }}-{{ '%03d' % record.record_seq }}
+        {% else %}―{% endif %}
+      </div>
+    </div>
+
+    <div class="detail-item">
+      <div class="di-label">発行者</div>
+      <div class="di-value">{{ record.issuer_name or '―' }}</div>
+    </div>
+
+    {% if record.isbn %}
+    <div class="detail-item">
+      <div class="di-label">ISBN</div>
+      <div class="di-value mono">{{ record.isbn }}</div>
+    </div>
+    {% endif %}
+
+    <div class="detail-item">
+      <div class="di-label">親分類</div>
+      <div class="di-value">{{ record.parent_cat_name or '―' }}</div>
+    </div>
+
+    <div class="detail-item" style="grid-column: 1 / -1;">
+      <div class="di-label">蔵置場所</div>
+      <div class="di-value">
+        {% if record.loc_name %}
+          <strong>{{ record.loc_name }}</strong>
+          {% if record.loc_shelf %} <span style="color:var(--ink-light);">/ {{ record.loc_shelf }}</span>{% endif %}
+          {% if record.loc_address %}
+          <div style="font-size:0.82rem;color:var(--ink-light);margin-top:0.15rem;">{{ record.loc_address }}</div>
+          {% endif %}
+        {% else %}―{% endif %}
+      </div>
+    </div>
+
+    <div class="detail-item">
+      <div class="di-label">蔵置開始日</div>
+      <div class="di-value mono">{{ record.retention_start or '―' }}</div>
+    </div>
+
+    <div class="detail-item">
+      <div class="di-label">蔵置終了日</div>
+      <div class="di-value mono">
+        {% if record.retention_end %}
+          <span {% if record.retention_end < today %}style="color:var(--stamp-red);"{% endif %}>
+            {{ record.retention_end }}
+          </span>
+        {% else %}―{% endif %}
+      </div>
+    </div>
+
+    <div class="detail-item">
+      <div class="di-label">蔵置の請求（登録）日時</div>
+      <div class="di-value mono">{{ record.registered_at[:16] if record.registered_at else '―' }}</div>
+    </div>
+
+    {% if record.notes %}
+    <div class="detail-item" style="grid-column: 1 / -1;">
+      <div class="di-label">備考</div>
+      <div class="di-value" style="white-space:pre-wrap;">{{ record.notes }}</div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<div class="action-bar">
+  <a href="/records/{{ record.id }}/edit" class="btn btn-secondary">この記録を編集</a>
+  <div class="spacer"></div>
+  <form method="post" action="/records/{{ record.id }}/delete"
+    data-confirm="蔵置管理票「{{ record.vault_ticket_no }}」を削除しますか？この操作は元に戻せません。">
+    <button type="submit" class="btn btn-danger btn-sm">削除</button>
+  </form>
+</div>
+
+<script>
+const today = new Date().toISOString().slice(0,10);
+</script>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}蔵置管理票一覧{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1>蔵置管理票一覧</h1>
+  <span class="subtitle">VAULT RECORDS</span>
+</div>
+
+<form method="get" class="search-bar">
+  <input type="text" name="q" value="{{ q }}" placeholder="名称・票番号・発行者で検索…">
+  <select name="category">
+    <option value="">種別: 全て</option>
+    <option value="document" {% if category == 'document' %}selected{% endif %}>書類</option>
+    <option value="book" {% if category == 'book' %}selected{% endif %}>書籍</option>
+  </select>
+  <select name="vault_type">
+    <option value="">区分: 全て</option>
+    {% for vt in ['LS','LI','LH','LW','LB','OTHER'] %}
+    <option value="{{ vt }}" {% if vault_type == vt %}selected{% endif %}>{{ vt }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary">検索</button>
+  <a href="/records" class="btn btn-outline">リセット</a>
+  <div style="flex:1"></div>
+  <a href="/records/new" class="btn btn-primary">＋ 新規登録</a>
+</form>
+
+{% if records %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>蔵置管理票番号</th>
+        <th>区分</th>
+        <th>識別符号</th>
+        <th>名称</th>
+        <th>発行者</th>
+        <th>蔵置場所</th>
+        <th>蔵置終了</th>
+        <th>登録日時</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td><span class="ticket-no">{{ r.vault_ticket_no }}</span></td>
+        <td>
+          <span class="badge badge-{{ r.vault_type }}">{{ r.vault_type }}</span>
+          <span class="badge badge-{{ 'doc' if r.category == 'document' else 'book' }}">
+            {{ '書類' if r.category == 'document' else '書籍' }}
+          </span>
+        </td>
+        <td>
+          {% if r.iss_code %}
+          <span class="ticket-no" style="font-size:0.75rem;">
+            {{ r.iss_code }}-{{ r.issuer_sub }}-{{ '%03d' % r.record_seq }}
+          </span>
+          {% else %}―{% endif %}
+        </td>
+        <td>
+          <div>{{ r.name_ja }}</div>
+          {% if r.name_en %}<div style="font-size:0.75rem;color:var(--ink-light);">{{ r.name_en }}</div>{% endif %}
+        </td>
+        <td style="font-size:0.82rem;">{{ r.issuer_name or '―' }}</td>
+        <td style="font-size:0.82rem;">
+          {{ r.loc_name or '―' }}
+          {% if r.loc_shelf %}<span style="color:var(--ink-light);font-size:0.75rem;"> / {{ r.loc_shelf }}</span>{% endif %}
+        </td>
+        <td style="font-family:var(--mono);font-size:0.78rem;white-space:nowrap;">
+          {{ r.retention_end or '―' }}
+        </td>
+        <td style="font-family:var(--mono);font-size:0.75rem;white-space:nowrap;">
+          {{ r.registered_at[:16] if r.registered_at else '―' }}
+        </td>
+        <td style="white-space:nowrap;">
+          <a href="/records/{{ r.id }}" class="btn btn-outline btn-sm">詳細</a>
+          <a href="/records/{{ r.id }}/edit" class="btn btn-secondary btn-sm">編集</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p style="font-size:0.78rem;color:var(--ink-light);margin-top:0.5rem;">{{ records|length }} 件表示</p>
+{% else %}
+<div class="empty-state">
+  <div class="icon">🗂</div>
+  <p>{% if q or category or vault_type %}該当する蔵置管理票が見つかりません。{% else %}蔵置管理票がまだ登録されていません。{% endif %}</p>
+  <br>
+  <a href="/records/new" class="btn btn-primary">新規登録する</a>
+</div>
+{% endif %}
+
+{% endblock %}

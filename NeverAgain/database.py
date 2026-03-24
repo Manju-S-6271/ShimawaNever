@@ -1,0 +1,95 @@
+import sqlite3
+import os
+from datetime import datetime
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "shimanev.db")
+
+
+def get_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+def init_db():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # 発行者マスタ
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS issuers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,           -- COM など（英字）
+        name TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+    """)
+
+    # 場所マスタ
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS locations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        place_code TEXT NOT NULL UNIQUE,     -- P001 など
+        name TEXT NOT NULL,
+        shelf TEXT,                          -- 棚・区画
+        address TEXT,
+        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+    """)
+
+    # 親分類マスタ
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS parent_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    )
+    """)
+
+    # 蔵置管理票
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS vault_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        -- 蔵置管理票番号の構成要素
+        vault_type TEXT NOT NULL DEFAULT 'LH',   -- LS/LI/LH/LW/LB/他
+        issuer_id INTEGER REFERENCES issuers(id),
+        issuer_sub TEXT DEFAULT '000',            -- C部分
+        location_id INTEGER REFERENCES locations(id),
+        record_seq INTEGER NOT NULL DEFAULT 1,   -- R部分の連番
+
+        -- 蔵置管理票番号（computed想定、別途アプリで生成）
+        vault_ticket_no TEXT,
+
+        -- 基本情報
+        category TEXT NOT NULL CHECK(category IN ('document', 'book')),
+        name_ja TEXT NOT NULL,
+        name_en TEXT,
+        isbn TEXT,                            -- 書籍の場合
+        issuer_name TEXT,                     -- 発行者名（自由記述）
+        parent_category_id INTEGER REFERENCES parent_categories(id),
+
+        -- 蔵置期間
+        retention_start TEXT,
+        retention_end TEXT,
+
+        -- 登録日時
+        registered_at TEXT DEFAULT (datetime('now', 'localtime')),
+
+        -- 備考
+        notes TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def generate_vault_ticket_no(vault_type, location_code, issuer_code, issuer_sub, record_seq):
+    """TSV-LH-P001-I000-C000-R001 形式を生成"""
+    i_part = f"I{issuer_code}" if issuer_code else "I000"
+    c_part = f"C{issuer_sub}" if issuer_sub else "C000"
+    r_part = f"R{int(record_seq):03d}"
+    return f"TSV-{vault_type}-{location_code}-{i_part}-{c_part}-{r_part}"
