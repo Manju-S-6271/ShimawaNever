@@ -1,4 +1,4 @@
-"""bookcodes.py
+"""./coapps/bookcodes.py
 ISBNコード及び書籍JANコードから書籍情報を取得するモジュール
 """
 
@@ -7,8 +7,9 @@ import json
 from datetime import datetime, timezone
 import yaml
 from google import genai
-import checkdigits
-
+import coapps.checkdigits as checkdigits
+import xml.etree.ElementTree as ET
+from coapps.scan import scan_multiple_barcodes_stable
 
 class Book:
     def __init__(self, isbn, jan_code=None):
@@ -45,11 +46,16 @@ class Book:
         self.is_isbn_valid = None
         self.is_jan_code_valid = None
 
-        # 設定ファイルからAI生成に関する設定を読み込む
+        # 設定ファイルからAI生成とGoogle Cloud APIに関する設定を読み込む
         with open("./settings.yml", "r") as f:
             settings = yaml.safe_load(f)
             self._gemini_api_key = settings["ai_generation"]["google_gemini_api_key"]
             self._gemini_model = settings["ai_generation"]["google_gemini_model"]
+            isbn_range_table_path = settings["book_info_entry"]["isbn_range_table_path"]
+            self._google_cloud_api_key = settings["book_info_entry"]["google_cloud_api_key"]
+
+        if isbn_range_table_path:
+            self._isbn_range_table = ET.parse(isbn_range_table_path).getroot()
 
     def fetch_by_isbn(self):
         """ISBNコードを元にAPIから書籍情報を取得し、属性を更新する"""
@@ -71,7 +77,7 @@ class Book:
     def _fetch_book_data(self):
         """OpenBD及びGoogle Books APIからISBNに対応する書籍データを取得して返す"""
         openbd_url = f"https://api.openbd.jp/v1/get?isbn={self.isbn}"
-        google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{self.isbn}"
+        google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{self.isbn}&key={self._google_cloud_api_key}"
 
         summary = {
             "isbn": self.isbn,
@@ -126,22 +132,32 @@ class Book:
         """Google Gemini APIを使用して書籍の説明文を生成して返す"""
         gemini_client = genai.Client(api_key=self._gemini_api_key)
 
-        prompt = f"""
-以下はOpenBD及びGoogle Books APIから取得したある書籍の情報です。
-これらの情報から、説明文（多くはGoogle Books APIによる情報のdescriptionフィールドに記載されています。）を取得してください。
-ただし、descriptionフィールドが存在しない場合、is_google_books_fetchedがFalseである場合、内容が不十分な場合は、「書籍の説明を取得できませんでした。」と返答してください。
-また、is_openbd_fetched及びis_google_books_fetchedの両方がFalseの場合は、「情報が取得できませんでした。」と返答してください。
+        system_prompt = f"""複数の情報源に基づいて書籍に係る説明文を抽出・生成する優秀なアシスタントとして、与えられたJSONデータから説明文（description）を特定し、整形して出力せよ。
+但し、次の条件を厳守すること。
+1. 次に掲げる場合は、「書籍の説明を取得できませんでした。」と返答すること。
+    - Google Books APIからの情報が取得できない場合（is_google_books_fetchedがFalseの場合）
+    - Google Books APIからの情報が取得できている場合でも、descriptionフィールドが存在しない場合
+    - Google Books APIからの情報が取得できている場合でも、descriptionフィールドの内容が不十分な場合（例: 単なる書籍タイトルの繰り返し。）
+2. OpenBD及びGoogle Books APIの両方からの情報が取得できない場合（is_openbd_fetched及びis_google_books_fetchedの両方がFalseの場合）は、「情報が取得できませんでした。」と返答すること。
+3. それ以外の場合は、Google Books APIからの情報を優先して説明文を抽出すること。Google Books APIからの情報が取得できない場合はOpenBDからの情報を用いて説明文を生成すること。
+4. descriptionフィールドの内容がフレーバーテキストや宣伝文のような内容であっても、説明文として出力すること。
+5. descriptionフィールド以外の内容を出力しないこと。また、descriptionフィールドの内容を要約したり、独自の文章を生成したりせず、descriptionフィールドの内容をそのまま出力すること。
+6. 出力する説明文は、前後の空白を除去した上で、改行やスペースなどの余分な空白を適切に整形して出力すること。
+7. 出力する説明文は、JSON形式などの構造化された形式ではなく、純粋なテキスト形式で出力すること。
+"""
+        prompt = f"""以下は、ISBNコード {self.isbn} と書籍JANコード {self.jan_code} に関する書籍情報の概要と、各情報源からの詳細な情報を示すJSONデータである。これらの情報に基づいて、書籍の説明文を抽出・生成せよ。
 
 OpenBD情報・取得状態:
 {json.dumps(summary, indent=2, ensure_ascii=False)}
 
 Google Books API情報:
-{json.dumps(google_books_data, indent=2, ensure_ascii=False)}
-"""
+{json.dumps(google_books_data, indent=2, ensure_ascii=False)}"""
+
 
         try:
             response = gemini_client.models.generate_content(
                 model=self._gemini_model,
+                config=genai.types.GenerateContentConfig(system_instruction=system_prompt),
                 contents=[prompt]
             )
             if response and response.text:
@@ -181,6 +197,69 @@ Google Books API情報:
             
             return aligned_isbn
         return None
+    
+    def design_isbn(self, only_export=False):
+        """
+        数字のみのISBN-13を、公式のRange Message XMLに基づいてハイフン区切りにする。
+        """
+        # 1. XMLパースの変数化
+        root = self._isbn_range_table
+
+        # 2. ISBNの正規化 (ハイフン除去など)
+        isbn = str(self.isbn).replace("-", "").strip()
+        if len(isbn) != 13:
+            return "Invalid ISBN length"
+
+        # --- ステップ1: 登録グループ(Registration Group)の特定 ---
+        ean = isbn[:3]
+        rest_after_ean = isbn[3:]
+        group_len = 0
+        
+        # EAN.UCCPrefixes セクションを探索
+        for ucc in root.findall(".//EAN.UCC"):
+            if ucc.find("Prefix").text == ean:
+                for rule in ucc.findall("./Rules/Rule"): # パスを正確に指定
+                    r_range = rule.find("Range").text.split("-")
+                    length = int(rule.find("Length").text)
+                    target = int(rest_after_ean[:7])
+                    if int(r_range[0]) <= target <= int(r_range[1]):
+                        group_len = length
+                        break
+        
+        if group_len == 0: return "Group not found"
+        
+        group_id = rest_after_ean[:group_len]
+        full_group_prefix = f"{ean}-{group_id}"
+        
+        # --- ステップ2: 出版社記号(Registrant)の特定 ---
+        rest_after_group = rest_after_ean[group_len:]
+        registrant_len = 0
+        
+        # RegistrationGroups セクションを探索
+        for group in root.findall(".//Group"):
+            if group.find("Prefix").text == full_group_prefix:
+                for rule in group.findall("./Rules/Rule"):
+                    r_range = rule.find("Range").text.split("-")
+                    length = int(rule.find("Length").text)
+                    # 書名記号部分を7桁で判定
+                    target_str = (rest_after_group[:7]).ljust(7, '0')
+                    target = int(target_str)
+                    if int(r_range[0]) <= target <= int(r_range[1]):
+                        registrant_len = length
+                        break
+        
+        # --- ステップ3: 組み立て ---
+        registrant = rest_after_group[:registrant_len]
+        # 残りからチェックデジット(1桁)を除いたものが書名記号(item)
+        item = rest_after_group[registrant_len:-1]
+        check_digit = isbn[-1]
+        
+        designed_isbn = f"{ean}-{group_id}-{registrant}-{item}-{check_digit}"
+
+        if not only_export:
+            self.isbn = designed_isbn
+
+        return designed_isbn
     
     def verify_isbn(self):
         """ISBNコード（ISBN-13のみ）の有効性を検証する関数"""
@@ -280,9 +359,17 @@ Google Books API情報:
         
 
 # 動作確認用エントリーポイント
-if __name__ == "__main__":
-    # ISBNコードを指定してBookオブジェクトを作成
-    book = Book(isbn="978-4-10-356291-7", jan_code="1920095015002")
+def entry_book_info():
+    # ISBNコードと書籍JANコードをスキャンしてBookオブジェクトを作成
+    scanned_codes = scan_multiple_barcodes_stable(expected_count=2, stability_threshold=10)
+    isbn_code = next((code for code in scanned_codes if code.startswith("978")), None)
+    jan_code = next((code for code in scanned_codes if code.startswith("192")), None)
+
+    # ISBNコードと書籍JANコードの両方がスキャンできた場合にBookオブジェクトを作成
+    if isbn_code and jan_code:
+        book = Book(isbn=isbn_code, jan_code=jan_code)
+    else:
+        print("ISBNコードと書籍JANコードの両方をスキャンできませんでした。")
 
     # ISBNコードと書籍JANコードの有効性を検証
     book.verify_isbn()
@@ -294,6 +381,9 @@ if __name__ == "__main__":
 
     # Cコードから対象、形態、内容の分類を解析して属性にセット
     book.parse_c_code()
+
+    # ISBNコードをハイフン付きの形式に変換して属性にセット
+    book.design_isbn()
 
     # 取得した書籍情報を表示
     print(f"ISBNコード {book.isbn} 書籍JANコード {book.jan_code} に関する書籍は、次の通りです。")

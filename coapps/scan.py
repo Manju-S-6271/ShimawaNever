@@ -1,3 +1,7 @@
+"""./coapps/scan.py
+バーコードスキャン機能を提供するモジュール
+"""
+
 from fastapi import FastAPI, HTTPException
 import cv2
 from pyzbar.pyzbar import decode

@@ -26,6 +26,8 @@ class Record(Base):
     record_period_start = Column(String, nullable=True, index=True, comment="保管期間（開始）")
     record_period_end = Column(String, nullable=True, index=True, comment="保管期間（終了）")
 
+    record_finished = Column(String, nullable=True, index=True, comment="保管終了フラグ")
+
     note = Column(String, nullable=True, index=True, comment="備考")
 
     issued_timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True, comment="登録日時")
@@ -82,6 +84,8 @@ class Book(Base):
     price = Column(Numeric(10, 2), nullable=True, index=True, comment="価格")
 
     size = Column(String, nullable=True, index=True, comment="サイズ")
+
+    stock_finished = Column(String, nullable=True, index=True, comment="在架終了フラグ")
 
     note = Column(String, nullable=True, index=True, comment="備考")
 
