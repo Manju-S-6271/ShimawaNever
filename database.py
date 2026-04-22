@@ -24,6 +24,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # ベースクラスの作成
 Base = declarative_base()
 
+
 # データベースセッションを取得するための関数
 def get_db():
     # データベースセッションを作成
@@ -35,3 +36,9 @@ def get_db():
     finally:
         # セッションを閉じる
         db.close()
+
+def init_db():
+    """テーブルを作成する"""
+    from models import Record, Issuer, Book, BookGroup, Shelf, ChangeHistory
+    Base.metadata.create_all(bind=engine)
+ 

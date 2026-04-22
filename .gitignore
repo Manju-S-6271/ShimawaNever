@@ -3,3 +3,5 @@ settings.yml
 __pycache__/
 /NeverAgain/*
 RangeMessage.xml
+alembic.ini
+ShimaNevMigrations/*

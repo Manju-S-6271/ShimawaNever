@@ -20,9 +20,10 @@ class Record(Base):
 
     record_type = Column(String, nullable=False, index=True, comment="資料種別")
 
-    issuer_tsv_code = Column(String, ForeignKey("issuers.tsv_code"), nullable=True, index=True, comment="発行者TSVコード")
+    issuer_tsv_code = Column(String, ForeignKey("issuers.tsv_code"), default="TSV-IS-211-0001-00001-0", nullable=False, index=True, comment="発行者TSVコード")
     shelf_tsv_code = Column(String, ForeignKey("shelves.tsv_code"), nullable=False, index=True, comment="書架TSVコード")
 
+    document_date = Column(String, nullable=True, index=True, comment="発行・交付・有効日")
     record_period_start = Column(String, nullable=True, index=True, comment="保管期間（開始）")
     record_period_end = Column(String, nullable=True, index=True, comment="保管期間（終了）")
 
@@ -43,7 +44,7 @@ class Issuer(Base):
     __tablename__ = "issuers"
 
     tsv_code = Column(String, primary_key=True, index=True, comment="TSVコード:資料発行者[IS]")
-    tsv_embed_code = Column(String, nullable=True, unique=True, index=True, comment="埋め込みTSVコード")
+    # tsv_embed_code = Column(String, nullable=True, unique=True, index=True, comment="埋め込みTSVコード")
     parent_tsv_code = Column(String, ForeignKey("issuers.tsv_code"), nullable=True, index=True, comment="親発行者のTSVコード")
 
     name = Column(String, nullable=False, index=True, comment="発行者名")
@@ -75,12 +76,20 @@ class Book(Base):
 
     authors = Column(String, nullable=True, index=True, comment="著者")
     publisher = Column(String, nullable=True, index=True, comment="出版社")
+    published_date = Column(String, nullable=True, index=True, comment="出版日")
+
+    description = Column(String, nullable=True, index=True, comment="説明")
 
     shelf_tsv_code = Column(String, ForeignKey("shelves.tsv_code"), nullable=False, index=True, comment="書架TSVコード")
 
     isbn = Column(String, nullable=True, unique=True, index=True, comment="ISBN")
     book_jan = Column(String, nullable=True, index=True, comment="書籍JANコード")
+
     c_code = Column(String, nullable=True, index=True, comment="Cコード")
+    target = Column(String, nullable=True, index=True, comment="対象")
+    form = Column(String, nullable=True, index=True, comment="形態")
+    content = Column(String, nullable=True, index=True, comment="内容")
+
     price = Column(Numeric(10, 2), nullable=True, index=True, comment="価格")
 
     size = Column(String, nullable=True, index=True, comment="サイズ")

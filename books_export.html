@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>書籍一覧レポート</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;700&family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ======================================================
+       Design Token
+    ====================================================== */
+    :root {
+      --bg:          #0e0e0f;
+      --surface:     #16161a;
+      --surface-hi:  #1e1e24;
+      --border:      #2a2a33;
+      --accent:      #c9a84c;
+      --accent-dim:  #8a6e2e;
+      --ok:          #4caf7d;
+      --danger:      #d16060;
+      --text-primary:#e8e6df;
+      --text-muted:  #7a7870;
+      --text-label:  #9b9890;
+      --mono:        'DM Mono', monospace;
+      --serif:       'Noto Serif JP', serif;
+      --display:     'Playfair Display', serif;
+      --radius:      4px;
+      --card-w:      780px;
+    }
+
+    /* ======================================================
+       Reset & Base
+    ====================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--serif);
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ======================================================
+       Page Header
+    ====================================================== */
+    .page-header {
+      position: relative;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 40px 40px;
+      overflow: hidden;
+    }
+
+    .page-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 39px,
+          var(--border) 39px,
+          var(--border) 40px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 39px,
+          var(--border) 39px,
+          var(--border) 40px
+        );
+      opacity: 0.3;
+    }
+
+    .page-header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-dim), transparent);
+    }
+
+    .header-inner {
+      position: relative;
+      max-width: var(--card-w);
+      margin: 0 auto;
+    }
+
+    .header-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .header-title {
+      font-family: var(--display);
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .header-meta {
+      margin-top: 20px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .meta-value {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* ======================================================
+       Search / Filter Bar
+    ====================================================== */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(14,14,15,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 40px;
+    }
+
+    .toolbar-inner {
+      max-width: var(--card-w);
+      margin: 0 auto;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box::placeholder { color: var(--text-muted); }
+    .search-box:focus { border-color: var(--accent); }
+
+    .result-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .result-count span { color: var(--accent); }
+
+    /* ======================================================
+       Main Content
+    ====================================================== */
+    .main {
+      max-width: var(--card-w);
+      margin: 0 auto;
+      padding: 40px 40px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ======================================================
+       Book Card
+    ====================================================== */
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .book-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: slide-in 0.4s ease both;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .book-card:hover {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 0 1px var(--accent-dim), 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .book-card.hidden { display: none; }
+
+    /* Card Header */
+    .card-header {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 16px;
+      align-items: start;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-hi);
+    }
+
+    .card-index {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      padding-top: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .card-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-title {
+      font-family: var(--serif);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .card-authors {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .card-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 4px;
+    }
+
+    /* Card Body */
+    .card-body {
+      padding: 0;
+    }
+
+    /* Info Table */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .info-table tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .info-table tr:last-child { border-bottom: none; }
+    .info-table tr:hover { background: var(--surface-hi); }
+
+    .info-table th {
+      width: 140px;
+      padding: 9px 16px 9px 24px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: var(--text-label);
+      text-align: left;
+      text-transform: uppercase;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .info-table td {
+      padding: 9px 24px 9px 0;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.6;
+      vertical-align: top;
+      word-break: break-all;
+    }
+
+    .info-table td.mono {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    /* ======================================================
+       Badge
+    ====================================================== */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .badge-ok     { background: rgba(76,175,125,0.15); color: var(--ok);     border: 1px solid rgba(76,175,125,0.3); }
+    .badge-danger { background: rgba(209, 96, 96,0.15); color: var(--danger); border: 1px solid rgba(209,96,96,0.3); }
+    .badge-default{ background: var(--surface-hi); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ======================================================
+       Empty State
+    ====================================================== */
+    .empty-state {
+      text-align: center;
+      padding: 80px 0;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      display: none;
+    }
+
+    /* ======================================================
+       Page Footer
+    ====================================================== */
+    .page-footer {
+      border-top: 1px solid var(--border);
+      padding: 20px 40px;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
+    }
+
+    /* ======================================================
+       Responsive
+    ====================================================== */
+    @media (max-width: 600px) {
+      .page-header, .toolbar, .main { padding-left: 16px; padding-right: 16px; }
+      .info-table th { width: 100px; font-size: 9px; }
+      .card-header { grid-template-columns: 36px 1fr; }
+      .card-badges { grid-column: 1 / -1; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Page Header ===== -->
+  <header class="page-header">
+    <div class="header-inner">
+      <p class="header-eyebrow">Library Management System</p>
+      <h1 class="header-title">書籍一覧レポート</h1>
+      <div class="header-meta">
+        <div class="meta-item">
+          <span class="meta-label">Total</span>
+          <span class="meta-value" id="total-count">6</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Generated</span>
+          <span class="meta-value">2026-04-08 17:52 JST</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Toolbar ===== -->
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <input
+        class="search-box"
+        type="search"
+        id="search-input"
+        placeholder="タイトル・著者・ISBN・TSVコード などで絞り込み…"
+        aria-label="絞り込み検索"
+      />
+      <p class="result-count" id="result-count">
+        <span id="result-num">6</span> 件表示
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== Main ===== -->
+  <main class="main" id="book-list">
+    
+    <article class="book-card" style="animation-delay:0.00s">
+      <header class="card-header">
+        <div class="card-index">#001</div>
+        <div class="card-title-block">
+          <h2 class="card-title">よふかしのうた. 10</h2>
+          <p class="card-authors">コトヤマ</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-danger">在架終了</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-09-850872-9</td></tr><tr><th>著者</th><td>コトヤマ</td></tr><tr><th>出版社</th><td>小学館</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-09-850872-3</td></tr><tr><th>JANコード</th><td class="mono">1929979005405</td></tr><tr><th>Cコード</th><td class="mono">C9979</td></tr><tr><th>対象</th><td>雑誌扱い</td></tr><tr><th>形態</th><td>コミック</td></tr><tr><th>内容</th><td>コミックス・劇画</td></tr><tr><th>価格</th><td>¥540</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:26:58</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:26:58</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+
+    <article class="book-card" style="animation-delay:0.06s">
+      <header class="card-header">
+        <div class="card-index">#002</div>
+        <div class="card-title-block">
+          <h2 class="card-title">きさらぎ異聞NoVelize : 猿夢・くねくね</h2>
+          <p class="card-authors">x0o0x 木古,おうみ</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-ok">在架中</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-7580-2607-9</td></tr><tr><th>著者</th><td>x0o0x 木古,おうみ</td></tr><tr><th>出版社</th><td>講談社</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-7580-2607-9</td></tr><tr><th>JANコード</th><td class="mono">1920193007206</td></tr><tr><th>Cコード</th><td class="mono">C0193</td></tr><tr><th>対象</th><td>一般</td></tr><tr><th>形態</th><td>文庫</td></tr><tr><th>内容</th><td>日本文学（小説・物語）</td></tr><tr><th>価格</th><td>¥720</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:06:13</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:06:13</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+
+    <article class="book-card" style="animation-delay:0.12s">
+      <header class="card-header">
+        <div class="card-index">#003</div>
+        <div class="card-title-block">
+          <h2 class="card-title">よるのばけもの</h2>
+          <p class="card-authors">住野,よる</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-ok">在架中</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-575-52209-9</td></tr><tr><th>著者</th><td>住野,よる</td></tr><tr><th>出版社</th><td>双葉社</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-575-52209-9</td></tr><tr><th>JANコード</th><td class="mono">1920193006483</td></tr><tr><th>Cコード</th><td class="mono">C0193</td></tr><tr><th>対象</th><td>一般</td></tr><tr><th>形態</th><td>文庫</td></tr><tr><th>内容</th><td>日本文学（小説・物語）</td></tr><tr><th>価格</th><td>¥648</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:05:56</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:05:56</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+
+    <article class="book-card" style="animation-delay:0.18s">
+      <header class="card-header">
+        <div class="card-index">#004</div>
+        <div class="card-title-block">
+          <h2 class="card-title">きさらぎ異聞. 4</h2>
+          <p class="card-authors">x0o0x 筒井,いつき</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-ok">在架中</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-7580-2957-1</td></tr><tr><th>著者</th><td>x0o0x 筒井,いつき</td></tr><tr><th>出版社</th><td>講談社</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-7580-2957-5</td></tr><tr><th>JANコード</th><td class="mono">1929979007805</td></tr><tr><th>Cコード</th><td class="mono">C9979</td></tr><tr><th>対象</th><td>雑誌扱い</td></tr><tr><th>形態</th><td>コミック</td></tr><tr><th>内容</th><td>コミックス・劇画</td></tr><tr><th>価格</th><td>¥780</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:05:28</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:05:28</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+
+    <article class="book-card" style="animation-delay:0.24s">
+      <header class="card-header">
+        <div class="card-index">#005</div>
+        <div class="card-title-block">
+          <h2 class="card-title">会話の０．２秒を言語学する</h2>
+          <p class="card-authors">水野／太貴</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-ok">在架中</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-10-356431-9</td></tr><tr><th>著者</th><td>水野／太貴</td></tr><tr><th>出版社</th><td>新潮社</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-10-356431-7</td></tr><tr><th>JANコード</th><td class="mono">1920080016007</td></tr><tr><th>Cコード</th><td class="mono">C0080</td></tr><tr><th>対象</th><td>一般</td></tr><tr><th>形態</th><td>単行本</td></tr><tr><th>内容</th><td>語学総記</td></tr><tr><th>価格</th><td>¥1,600</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:04:55</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:04:55</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+
+    <article class="book-card" style="animation-delay:0.30s">
+      <header class="card-header">
+        <div class="card-index">#006</div>
+        <div class="card-title-block">
+          <h2 class="card-title">近畿地方のある場所について</h2>
+          <p class="card-authors">背筋</p>
+        </div>
+        <div class="card-badges"><span class="badge badge-ok">在架中</span></div>
+      </header>
+      <div class="card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><th>TSVコード</th><td class="mono">TSV-BK-200-04-737584-6</td></tr><tr><th>著者</th><td>背筋</td></tr><tr><th>出版社</th><td>KADOKAWA</td></tr><tr><th>書架</th><td class="mono">TSV-SH-0001-00001-0</td></tr><tr><th>ISBN</th><td class="mono">978-4-04-737584-0</td></tr><tr><th>JANコード</th><td class="mono">1920093013000</td></tr><tr><th>Cコード</th><td class="mono">C0093</td></tr><tr><th>対象</th><td>一般</td></tr><tr><th>形態</th><td>単行本</td></tr><tr><th>内容</th><td>日本文学（小説・物語）</td></tr><tr><th>価格</th><td>¥1,300</td></tr><tr><th>登録日時</th><td class="mono">2026-04-02 12:04:05</td></tr><tr><th>最終更新日時</th><td class="mono">2026-04-02 12:04:05</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <p class="empty-state" id="empty-state">— 該当する書籍がありません —</p>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="page-footer">
+    LIBRARY MANAGEMENT SYSTEM &nbsp;·&nbsp; BOOK EXPORT &nbsp;·&nbsp; 2026-04-08 17:52 JST
+  </footer>
+
+  <!-- ===== Search Script ===== -->
+  <script>
+    (function () {
+      const input  = document.getElementById('search-input');
+      const cards  = Array.from(document.querySelectorAll('.book-card'));
+      const numEl  = document.getElementById('result-num');
+      const empty  = document.getElementById('empty-state');
+
+      input.addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        let visible = 0;
+
+        cards.forEach(function (card) {
+          const text = card.textContent.toLowerCase();
+          const match = !q || text.includes(q);
+          card.classList.toggle('hidden', !match);
+          if (match) visible++;
+        });
+
+        numEl.textContent = visible;
+        empty.style.display = visible === 0 ? 'block' : 'none';
+      });
+    })();
+  </script>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ from google import genai
 import coapps.checkdigits as checkdigits
 import xml.etree.ElementTree as ET
 from coapps.scan import scan_multiple_barcodes_stable
+import sys
 
 class Book:
     def __init__(self, isbn, jan_code=None):
@@ -80,7 +81,7 @@ class Book:
         google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{self.isbn}&key={self._google_cloud_api_key}"
 
         summary = {
-            "isbn": self.isbn,
+            "isbn": self.align_isbn(only_export=True),
             "jan_code": self.jan_code,
             "is_isbn_valid": self.is_isbn_valid,
             "is_jan_code_valid": self.is_jan_code_valid,
@@ -97,13 +98,41 @@ class Book:
             "is_ai_generated": False,
         }
 
+        # Google Books APIから書籍タイトルを取得
+        google_books_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{self.isbn}&key={self._google_cloud_api_key}"
+        google_books_data = None
+        # Google Books APIからタイトル取得
+        google_books_response = requests.get(google_books_url)
+        if google_books_response.status_code == 200:
+            try:
+                data = google_books_response.json()
+                if data.get("items"):
+                    summary["title"] = data["items"][0]["volumeInfo"].get("title")
+                # itemsがなければsummary["title"]はNoneのまま（次のフォールバックへ）
+            except Exception:
+                pass
+
+        # Google Booksでタイトルが取れなかった場合にopenBDへ（elseの外に出す）
+        if summary["title"] is None:
+            openbd_response_title = requests.get(openbd_url)
+            if openbd_response_title.status_code == 200:
+                try:
+                    data = openbd_response_title.json()
+                    if data and data[0] and data[0].get("summary"):
+                        summary["title"] = data[0]["summary"].get("title")
+                except Exception:
+                    pass
+
+        # タイトルが最終的にNoneなら明示的に設定
+        if summary["title"] is None:
+            summary["title"] = "タイトル情報なし"
+
         # OpenBD APIから基本書籍情報（summaryフィールド）を取得
         openbd_response = requests.get(openbd_url)
         if openbd_response.status_code == 200:
             openbd_data = openbd_response.json()
             if openbd_data and isinstance(openbd_data, list) and len(openbd_data) > 0 and openbd_data[0] is not None:
                 openbd_summary = openbd_data[0].get("summary", {})
-                summary["title"] = openbd_summary.get("title")
                 summary["volume"] = openbd_summary.get("volume")
                 summary["series"] = openbd_summary.get("series")
                 summary["publisher"] = openbd_summary.get("publisher")
@@ -113,8 +142,6 @@ class Book:
                 summary["is_openbd_fetched"] = True
 
         # Google Books APIから追加書籍情報（説明文生成用）を取得
-        google_books_data = None
-        google_books_response = requests.get(google_books_url)
         if google_books_response.status_code == 200:
             google_books_data = google_books_response.json()
             if google_books_data and "items" in google_books_data and len(google_books_data["items"]) > 0:
@@ -357,13 +384,49 @@ Google Books API情報:
         # 現在のself.__dict__をjson.dumpsで整形して返す
         return json.dumps({k: v for k, v in self.__dict__.items() if not k.startswith("_")}, indent=2, ensure_ascii=False)
         
+def fetch_all(isbn: str, jan_code: str | None = None) -> Book:
+    """BookオブジェクトにISBN/JANコードから取得できる全情報を埋め込んで返す"""
+    book = Book(isbn=isbn, jan_code=jan_code)
+
+    # --- ISBNの正規化・検証 ---
+    book.align_isbn()       # ハイフン除去して正規化
+    book.verify_isbn()      # is_isbn_valid をセット
+
+    if not book.is_isbn_valid:
+        print(f"[WARNING] ISBNコードが無効です: {book.isbn}", file=sys.stderr)
+
+    # --- 書籍JANコードの検証・解析 ---
+    if book.jan_code:
+        book.verify_jan_code()  # is_jan_code_valid をセット
+
+        if book.is_jan_code_valid:
+            try:
+                book.fetch_by_jan_code()  # c_code, price をセット
+                book.parse_c_code()       # c_code_target/form/content をセット
+            except ValueError as e:
+                print(f"[WARNING] 書籍JANコードの解析に失敗しました: {e}", file=sys.stderr)
+        else:
+            print(f"[WARNING] 書籍JANコードが無効です: {book.jan_code}", file=sys.stderr)
+
+    # --- APIから書籍情報を取得 ---
+    book.fetch_by_isbn()    # title, author, publisher ... description をセット
+
+    # --- ISBNをハイフン付き表示形式に整形（取得後に実施）---
+    try:
+        book.design_isbn()  # isbn属性をハイフン区切りに更新
+    except Exception as e:
+        print(f"[WARNING] ISBNのハイフン整形に失敗しました: {e}", file=sys.stderr)
+
+    return book
 
 # 動作確認用エントリーポイント
 def entry_book_info():
     # ISBNコードと書籍JANコードをスキャンしてBookオブジェクトを作成
-    scanned_codes = scan_multiple_barcodes_stable(expected_count=2, stability_threshold=10)
-    isbn_code = next((code for code in scanned_codes if code.startswith("978")), None)
-    jan_code = next((code for code in scanned_codes if code.startswith("192")), None)
+    # scanned_codes = scan_multiple_barcodes_stable(expected_count=2, stability_threshold=10)
+    # isbn_code = next((code for code in scanned_codes if code.startswith("978")), None)
+    # jan_code = next((code for code in scanned_codes if code.startswith("192")), None)
+    isbn_code = input()
+    jan_code = input()
 
     # ISBNコードと書籍JANコードの両方がスキャンできた場合にBookオブジェクトを作成
     if isbn_code and jan_code:

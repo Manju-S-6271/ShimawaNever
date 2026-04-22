@@ -53,6 +53,7 @@ if __name__ == "__main__":
 
     if isbn_code and jan_code:
         book_info = get_perfect_book_info(isbn_code, jan_code)
+        book_info.design_isbn()
         if book_info:
             print(f"ISBNコード {book_info.isbn} 書籍JANコード {book_info.jan_code} に関する書籍は、次の通りです。")
             print()
@@ -68,3 +69,4 @@ if __name__ == "__main__":
             print()
             print(f"価格: {book_info.price}")
             print(f"その他の情報: {book_info}")
+            
