@@ -1,0 +1,55 @@
+import inquirer
+
+questions = [
+    inquirer.Text(
+        "title",
+        message="書籍名"
+    ),
+    inquirer.Text(
+        "title_phonetic",
+        message="書籍名（読み仮名）"
+    ),
+    inquirer.Text(
+        "subtitle",
+        message="サブタイトル"
+    ),
+    inquirer.Text(
+        "authors",
+        message="著者"
+    ),
+    inquirer.Text(
+        "publisher",
+        message="出版社"
+    ),
+    inquirer.Text(
+        "published_date",
+        message="出版日"
+    ),
+    inquirer.Text(
+        "c_code",
+        message="Cコード"
+    ),
+    inquirer.Text(
+        "size",
+        message="サイズ"
+    ),
+    inquirer.Text(
+        "price",
+        message="価格"
+    ),
+    inquirer.Confirm(
+        "stock_finished",
+        message="在架終了済みですか",
+        default=False
+    ),
+    inquirer.Editor(
+        "description",
+        message="説明"
+    ),
+    inquirer.Editor(
+        "note",
+        message="備考"
+    ),
+]
+
+inquirer.prompt(questions)

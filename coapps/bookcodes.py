@@ -9,7 +9,6 @@ import yaml
 from google import genai
 import coapps.checkdigits as checkdigits
 import xml.etree.ElementTree as ET
-from coapps.scan import scan_multiple_barcodes_stable
 import sys
 
 class Book:

@@ -4,6 +4,32 @@ class TSVCodeGenerator:
     """
 
     @staticmethod
+    def tsv_to_s_tsv(tsv_code: str) -> str:
+        """
+        TSVコード → S-TSVコード
+        例: TSV-BK-202-000-000-000-6 → 2020000000006
+        """
+        parts = tsv_code.split("-")
+        # TSV-XX-NNN-[固有番号(可変個)]-C の構造
+        # parts[0]="TSV", parts[1]=区分記号, parts[2]=区分コード(3桁),
+        # parts[3...-1]=固有番号各セグメント, parts[-1]=チェック数字
+        if parts[0] != "TSV" or len(parts) < 5:
+            raise ValueError(f"不正なTSVコードです: {tsv_code}")
+
+        obj_code   = parts[2]                          # 3桁
+        unique_raw = "".join(parts[3:-1])              # 固有番号（ハイフン除去）
+        check      = parts[-1]                         # チェック数字
+
+        if len(obj_code) != 3 or not obj_code.isdigit():
+            raise ValueError(f"オブジェクト区分コードが不正です: {obj_code}")
+        if len(unique_raw) != 9 or not unique_raw.isdigit():
+            raise ValueError(f"固有番号（ハイフン除外後）が9桁になりません: {unique_raw}")
+        if len(check) != 1 or not check.isdigit():
+            raise ValueError(f"チェック数字が不正です: {check}")
+
+        return f"{obj_code}{unique_raw}{check}"
+
+    @staticmethod
     def calculate_check_digit(validation_code: str) -> str:
         """
         S-TSV検証コード（12桁）からチェック数字を計算する（モジュール10 ウェイト3）

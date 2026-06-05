@@ -3,7 +3,7 @@
 """
 
 from coapps.bookcodes import Book, fetch_all, entry_book_info
-from coapps.scan import scan_multiple_barcodes_stable
+from Lacky_Star_Folder.scan import scan_multiple_barcodes_stable
 from coapps.checkdigits import calculate, verify
 from Lacky_Star_Folder.testsz import get_perfect_book_info
 from models import Book as BookModel

@@ -1,5 +1,5 @@
 from coapps.bookcodes import Book
-from coapps.scan import scan_multiple_barcodes_stable
+from Lacky_Star_Folder.scan import scan_multiple_barcodes_stable
 
 def get_perfect_book_info(isbn, jan):
     # ① インスタンス化

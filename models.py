@@ -23,6 +23,10 @@ class Record(Base):
         String, primary_key=True, index=True,
         comment="TSVコード [TSV-RE]: 記録資料等の識別子"
     )
+    s_tsv_code = Column(
+        String, index=True,
+        comment="S-TSVコード"
+    )
     parent_tsv_code = Column(
         String, ForeignKey("records.tsv_code"), nullable=True, index=True,
         comment="親記録資料のTSVコード [TSV-RE]: 資料がファイル等の収納物である場合に設定する"
@@ -86,6 +90,10 @@ class Issuer(Base):
         String, primary_key=True, index=True,
         comment="TSVコード [TSV-IS]: 資料発行者の識別子"
     )
+    s_tsv_code = Column(
+        String, index=True,
+        comment="S-TSVコード"
+    )
     parent_tsv_code = Column(
         String, ForeignKey("issuers.tsv_code"), nullable=True, index=True,
         comment="親発行者のTSVコード [TSV-IS]: 発行者が組織の下位部門等である場合に設定する"
@@ -130,6 +138,10 @@ class Book(Base):
     tsv_code = Column(
         String, primary_key=True, index=True,
         comment="TSVコード [TSV-BK]: 書籍の識別子"
+    )
+    s_tsv_code = Column(
+        String, index=True,
+        comment="S-TSVコード"
     )
     bookgroup_tsv_code = Column(
         String, ForeignKey("book_groups.tsv_code"), nullable=True, index=True,
@@ -209,6 +221,10 @@ class BookGroup(Base):
         String, primary_key=True, index=True,
         comment="TSVコード [TSV-BG]: 書籍グループの識別子"
     )
+    s_tsv_code = Column(
+        String, index=True,
+        comment="S-TSVコード"
+    )
     parent_tsv_code = Column(
         String, ForeignKey("book_groups.tsv_code"), nullable=True, index=True,
         comment="親書籍グループのTSVコード [TSV-BG]: グループが別グループの下位に位置する場合に設定する"
@@ -244,6 +260,10 @@ class Shelf(Base):
     tsv_code = Column(
         String, primary_key=True, index=True,
         comment="TSVコード [TSV-SH]: 書架の識別子"
+    )
+    s_tsv_code = Column(
+        String, index=True,
+        comment="S-TSVコード"
     )
     parent_tsv_code = Column(
         String, ForeignKey("shelves.tsv_code"), nullable=True, index=True,
