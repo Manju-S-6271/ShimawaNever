@@ -5,12 +5,12 @@
 from coapps.bookcodes import Book, fetch_all, entry_book_info
 from coapps.scan import scan_multiple_barcodes_stable
 from coapps.checkdigits import calculate, verify
-from testsz import get_perfect_book_info
+from Lacky_Star_Folder.testsz import get_perfect_book_info
 from models import Book as BookModel
 import database
 import inquirer
-from BookRecorder.main import main as run_book_recorder
-from BookDataQuerier.main import main as run_book_querier
+from Lacky_Star_Folder.BookRecorder.main import main as run_book_recorder
+from Lacky_Star_Folder.BookDataQuerier.main import main as run_book_querier
 
 
 if __name__ == "__main__":
@@ -90,5 +90,5 @@ if __name__ == "__main__":
             entry_book_info()
         elif coapps == "Book Record Exporter":
             print("Book Record Exporter を開きます...")
-            import BookRecordExporter.main
+            import Lacky_Star_Folder.BookRecordExporter.main
             

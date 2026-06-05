@@ -11,7 +11,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Static, Button, Input, Label, RichLog
 from textual.containers import Horizontal, Vertical, ScrollableContainer
 from textual.reactive import reactive
-from coapps.tsvgen.tsvgen3 import generate_bk_isbn13 as generate_bk_code
+from Lacky_Star_Folder.tsvgen.tsvgen3 import generate_bk_isbn13 as generate_bk_code
 
 # ── 既存モジュール（プロジェクト側で用意されているものをそのまま使用） ──
 from coapps.bookcodes import fetch_all          # type: ignore

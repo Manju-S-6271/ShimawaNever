@@ -25,7 +25,7 @@ from textual.reactive import reactive
 import database
 from database import init_db
 from models import Record, Issuer, Book, BookGroup, Shelf, ChangeHistory
-from coapps.tsvgen.tsvgen import (
+from Lacky_Star_Folder.tsvgen.tsvgen import (
     generate_bk_code, generate_bg_code, generate_re_code,
     generate_is_code, generate_sh_code,
     validate_tsv_code, validate_s_tsv_code,
