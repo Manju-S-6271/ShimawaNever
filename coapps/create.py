@@ -4,6 +4,8 @@ from coapps.BookApps import BookJAN
 from coapps.BookApps import RakutenAPI
 from coapps.BookApps import ISBN
 from coapps.tsvgen import TSVCodeGenerator as TSVGen
+import inquirer
+from 
 
 def createBookwithScanner():
     shelf = inquirer.text("これから登録する全ての本に関連付ける書架のTSVコードを入力してください")
@@ -49,3 +51,13 @@ def createBookwithScanner():
         print(f"備考              : {book.note}")
         print(f"登録日時          : {book.issued_timestamp}")
         print(f"最終更新日時      : {book.last_updated_timestamp}")
+
+create_questions = {
+    "books": [
+        inquirer.Text("unique", "追加する書籍に割り当てる固有番号を入力してください"),
+        inquirer.Text("title", "")
+    ]
+}
+
+def createBook():
+    pass
