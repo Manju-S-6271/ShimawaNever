@@ -1,1 +1,1 @@
-from coapps.BookApps import RakutenAPI
+from Lacky_Star_Folder.coapps.BookApps import RakutenAPI

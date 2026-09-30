@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 import yaml
 from google import genai
-import coapps.checkdigits as checkdigits
+import Lacky_Star_Folder.coapps.checkdigits as checkdigits
 import xml.etree.ElementTree as ET
 import sys
 

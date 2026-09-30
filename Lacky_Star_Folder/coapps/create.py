@@ -1,9 +1,9 @@
 import inquirer
 from models import Book
-from coapps.BookApps import BookJAN
-from coapps.BookApps import RakutenAPI
-from coapps.BookApps import ISBN
-from coapps.tsvgen import TSVCodeGenerator as TSVGen
+from Lacky_Star_Folder.coapps.BookApps import BookJAN
+from Lacky_Star_Folder.coapps.BookApps import RakutenAPI
+from Lacky_Star_Folder.coapps.BookApps import ISBN
+from Lacky_Star_Folder.coapps.tsvgen import TSVCodeGenerator as TSVGen
 import inquirer
 from 
 

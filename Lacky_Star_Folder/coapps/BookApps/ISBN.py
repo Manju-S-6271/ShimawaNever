@@ -3,7 +3,7 @@ ISBNから書籍情報を取得するモジュール
 """
 
 from models import Book
-from coapps import settings
+from Lacky_Star_Folder.coapps import settings
 
 def design_isbn(book: Book) -> Book:
     """

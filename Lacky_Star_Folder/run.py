@@ -1,4 +1,4 @@
-from coapps.bookcodes import entry_book_info
+from Lacky_Star_Folder.coapps.bookcodes import entry_book_info
 
 if __name__ == "__main__":
     # 書籍情報の入力を開始

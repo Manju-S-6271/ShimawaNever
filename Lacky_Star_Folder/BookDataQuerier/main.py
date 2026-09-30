@@ -14,9 +14,9 @@ from textual.reactive import reactive
 from Lacky_Star_Folder.tsvgen.tsvgen3 import generate_bk_isbn13 as generate_bk_code
 
 # ── 既存モジュール（プロジェクト側で用意されているものをそのまま使用） ──
-from coapps.bookcodes import fetch_all          # type: ignore
+from Lacky_Star_Folder.coapps.bookcodes import fetch_all          # type: ignore
 from models import Book as BookModel            # type: ignore
-from coapps.checkdigits import calculate        # type: ignore
+from Lacky_Star_Folder.coapps.checkdigits import calculate        # type: ignore
 import database                                 # type: ignore
 
 

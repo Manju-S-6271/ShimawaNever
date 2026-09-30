@@ -2,9 +2,9 @@
 データベースの基本的な登録・更新・削除・検索の操作を行うアプリケーション
 """
 
-from coapps.bookcodes import Book, fetch_all, entry_book_info
+from Lacky_Star_Folder.coapps.bookcodes import Book, fetch_all, entry_book_info
 from Lacky_Star_Folder.scan import scan_multiple_barcodes_stable
-from coapps.checkdigits import calculate, verify
+from Lacky_Star_Folder.coapps.checkdigits import calculate, verify
 from Lacky_Star_Folder.testsz import get_perfect_book_info
 from models import Book as BookModel
 import database

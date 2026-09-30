@@ -1,4 +1,4 @@
-from coapps.bookcodes import Book
+from Lacky_Star_Folder.coapps.bookcodes import Book
 from Lacky_Star_Folder.scan import scan_multiple_barcodes_stable
 
 def get_perfect_book_info(isbn, jan):
